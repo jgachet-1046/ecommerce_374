@@ -14,7 +14,8 @@ class Order(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     total_price = db.Column(db.Float, nullable=False)
 
-db.create_all()
+with app.app_context():
+    db.create_all()
 
 @app.route('/api/orders', methods=['GET'])
 def get_orders():
