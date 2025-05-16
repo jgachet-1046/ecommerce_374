@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker.swarmmode=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    deploy:
+      replicas: 1
+    networks:
+      - backend
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: catalogue
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    deploy:
+      replicas: 1
+    networks:
+      - backend
+
+  catalogue:
+    build: ./catalogue
+    labels:
+      - "traefik.http.routers.catalogue.rule=PathPrefix(`/api/products`)"
+      - "traefik.http.services.catalogue.loadbalancer.server.port=8080"
+    depends_on:
+      - db
+      - rabbitmq
+    deploy:
+      replicas: 2
+    networks:
+      - backend
+
+  orders:
+    build: ./orders
+    labels:
+      - "traefik.http.routers.orders.rule=PathPrefix(`/api/orders`)"
+      - "traefik.http.services.orders.loadbalancer.server.port=5000"
+    depends_on:
+      - rabbitmq
+    deploy:
+      replicas: 2
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: overlay

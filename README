@@ -1,0 +1,42 @@
+---
+# 🚀 Déploiement avec Docker Swarm
+---
+
+## Étapes pour déployer :
+1. Initialiser Swarm (sur Play With Docker ou localement) :
+```bash
+docker swarm init
+```
+
+2. Déployer la stack :
+```bash
+docker stack deploy -c docker-compose.yml ecommerce
+```
+
+3. Vérifier les services :
+```bash
+docker service ls
+```
+
+4. Vérifier les réplicas :
+```bash
+docker service ps ecommerce_catalogue
+```
+
+5. (Optionnel) Ajouter le visualizer :
+```yaml
+  visualizer:
+    image: dockersamples/visualizer:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - backend
+```
+Accès : `http://localhost:8081` pour voir l’état du cluster.
+
+---
