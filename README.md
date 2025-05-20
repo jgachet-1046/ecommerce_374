@@ -94,6 +94,7 @@ curl -X POST http://localhost/api/orders \
   -d '{"product_id": 1, "quantity": 3}'
 ```
 🔁 Communication entre services
+
 Le service Flask appelle l’API Spring Boot pour vérifier le prix du produit.
 
 Le service Spring Boot envoie un message dans RabbitMQ après chaque création de produit.
@@ -101,6 +102,7 @@ Le service Spring Boot envoie un message dans RabbitMQ après chaque création d
 Le service Flask consomme ce message via une Work Queue.
 
 🛠️ Débogage
+
 📦 docker ps → Voir les conteneurs actifs
 
 📜 docker logs <nom_du_service> → Afficher les logs d’un service
@@ -119,20 +121,13 @@ une mise en file fiable des événements
 une scalabilité facile (plusieurs workers Flask possibles)
 
 🧹 Nettoyer le projet
-bash
-Copier
-Modifier
+```bash
 docker-compose down -v --remove-orphans
+```
 📬 Auteur
-Projet développé dans le cadre de l’EPSIC – Module 321 – VGZ 6
-Auteur : Jérémy Gachet
-
-yaml
-Copier
-Modifier
+Auteur : Jérémy Gachet - Nahel Kivuila - Paco Galasso
 
 ---
-
 
 
 
