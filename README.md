@@ -54,15 +54,15 @@ Dans le dossier `catalogue/`, exécute :
 
 ```bash
 mvn clean package
+```
 Un fichier .jar sera généré dans target/. Il sera utilisé par le Dockerfile.
 
 3. Lancer les conteneurs
 À la racine du projet (ecommerce_374/), exécute :
 
-bash
-Copier
-Modifier
+```bash
 docker-compose up --build
+```
 Cela démarre :
 
 Spring Boot sur /api/products
@@ -82,19 +82,17 @@ Traefik UI	http://localhost:8080
 
 🧪 Exemple de requêtes
 ➕ Ajouter un produit
-bash
-Copier
-Modifier
+```bash
 curl -X POST http://localhost/api/products \
   -H "Content-Type: application/json" \
   -d '{"name": "T-shirt", "description": "100% coton", "price": 20.0}'
+```
 🧾 Passer une commande
-bash
-Copier
-Modifier
+```bash
 curl -X POST http://localhost/api/orders \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "quantity": 3}'
+```
 🔁 Communication entre services
 Le service Flask appelle l’API Spring Boot pour vérifier le prix du produit.
 
