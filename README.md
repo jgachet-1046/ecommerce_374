@@ -20,10 +20,6 @@ ecommerce_374/
 ├── docker-compose.yml # Déploiement multi-conteneur
 ├── README.md # Guide de démarrage
 
-yaml
-Copier
-Modifier
-
 ---
 
 ## ⚙️ Technologies utilisées
