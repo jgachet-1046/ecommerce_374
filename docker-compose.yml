@@ -5,7 +5,6 @@ services:
     image: traefik:v2.10
     command:
       - "--api.insecure=true"
-      - "--providers.docker.swarmmode=true"
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
     ports:
@@ -45,7 +44,7 @@ services:
       - backend
 
   catalogue:
-    build: ./catalogue
+    image: ecommerce_catalogue
     labels:
       - "traefik.http.routers.catalogue.rule=PathPrefix(`/api/products`)"
       - "traefik.http.services.catalogue.loadbalancer.server.port=8080"
@@ -58,7 +57,7 @@ services:
       - backend
 
   orders:
-    build: ./orders
+    image: ecommerce_orders
     labels:
       - "traefik.http.routers.orders.rule=PathPrefix(`/api/orders`)"
       - "traefik.http.services.orders.loadbalancer.server.port=5000"

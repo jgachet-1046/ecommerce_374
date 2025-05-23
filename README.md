@@ -5,7 +5,7 @@ Ce projet démontre l’architecture de microservices à l’aide de deux servic
 - **Gestion de commandes** (Flask + SQLite)
 
 L'infrastructure utilise :
-- 📦 Docker Compose pour le déploiement multi-conteneur
+- 📦 Docker Swarm pour le déploiement multi-conteneur
 - 🚪 Traefik comme API Gateway
 - 🐰 RabbitMQ comme middleware de messagerie (Work Queues)
 - 🗃️ PostgreSQL comme base de données du catalogue
@@ -14,11 +14,19 @@ L'infrastructure utilise :
 
 ## 📁 Structure du projet
 
+```
 ecommerce_374/
-├── catalogue/ # Service Spring Boot
-├── orders/ # Service Flask
-├── docker-compose.yml # Déploiement multi-conteneur
-├── README.md # Guide de démarrage
+├── src/                    # Service Spring Boot (catalogue)
+│   ├── Dockerfile
+│   └── ... (code + pom.xml)
+├── front/                  # Service Flask (commandes)
+│   ├── Dockerfile
+│   ├── app.py
+│   └── requirements.txt
+├── target/                 # Fichier .jar généré par Maven
+├── docker-compose.yml      # Déploiement Docker Swarm
+├── README.md
+```
 
 ---
 
@@ -30,7 +38,7 @@ ecommerce_374/
 | API Commandes   | Flask + SQLite           |
 | API Gateway     | Traefik                  |
 | Message Broker  | RabbitMQ (Work Queue)    |
-| Orchestration   | Docker Compose           |
+| Orchestration   | Docker Swarm             |
 
 ---
 
@@ -38,122 +46,125 @@ ecommerce_374/
 
 ### 1. Pré-requis
 
-- [Docker](https://www.docker.com/)
-- [Docker Compose](https://docs.docker.com/compose/)
-- Java 17 (si build local du .jar)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- Java 17 (pour compiler le projet Spring)
+- Maven (`mvn -v` doit fonctionner)
 
 ---
 
-### 2. Générer le `.jar` pour Spring Boot
+### 2. Générer le fichier `.jar` Spring Boot
 
-Dans le dossier `catalogue/`, exécute :
+Dans le dossier racine du projet :
 
 ```bash
 mvn clean package
 ```
-Un fichier .jar sera généré dans target/. Il sera utilisé par le Dockerfile.
 
-3. Lancer les conteneurs
-À la racine du projet (ecommerce_374/), exécute :
+Un fichier `.jar` sera généré dans `target/`. Il est utilisé par le Dockerfile du service `catalogue`.
+
+---
+
+### 3. Construire les images Docker
 
 ```bash
-docker-compose up --build
+# Image Spring Boot
+docker build -t ecommerce_catalogue -f src/Dockerfile .
+
+# Image Flask
+docker build -t ecommerce_orders ./front
 ```
-Cela démarre :
 
-Spring Boot sur /api/products
+---
 
-Flask sur /api/orders
+### 4. Initialiser Docker Swarm
 
-RabbitMQ sur localhost:15672
+```bash
+docker swarm init
+```
 
-Traefik Dashboard sur localhost:8080
+---
 
-4. Accès aux services
-Composant	URL
-API Produits	http://localhost/api/products
-API Commandes	http://localhost/api/orders
-RabbitMQ UI	http://localhost:15672 (guest / guest)
-Traefik UI	http://localhost:8080
+### 5. Déployer la stack avec Docker Swarm
 
-🧪 Exemple de requêtes
-➕ Ajouter un produit
+```bash
+docker stack deploy -c docker-compose.yml ecommerce
+```
+
+---
+
+## 🔗 Accès aux services
+
+| Composant       | URL                                     |
+|----------------|------------------------------------------|
+| API Produits    | http://localhost/api/products           |
+| API Commandes   | http://localhost/api/orders             |
+| RabbitMQ UI     | http://localhost:15672 (guest / guest)  |
+| Traefik UI      | http://localhost:8080                   |
+
+---
+
+## 🧪 Exemple de requêtes
+
+### ➕ Ajouter un produit
+
 ```bash
 curl -X POST http://localhost/api/products \
   -H "Content-Type: application/json" \
   -d '{"name": "T-shirt", "description": "100% coton", "price": 20.0}'
 ```
-🧾 Passer une commande
+
+### 🧾 Passer une commande
+
 ```bash
 curl -X POST http://localhost/api/orders \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "quantity": 3}'
 ```
-🔁 Communication entre services
-
-Le service Flask appelle l’API Spring Boot pour vérifier le prix du produit.
-
-Le service Spring Boot envoie un message dans RabbitMQ après chaque création de produit.
-
-Le service Flask consomme ce message via une Work Queue.
-
-🛠️ Débogage
-
-📦 docker ps → Voir les conteneurs actifs
-
-📜 docker logs <nom_du_service> → Afficher les logs d’un service
-
-🧹 docker-compose down → Arrêter et supprimer tous les conteneurs
-
-📘 Pattern de messagerie utilisé
-Work Queues (modèle producteur → file → consommateur)
-
-Cela permet :
-
-un découplage entre microservices
-
-une mise en file fiable des événements
-
-une scalabilité facile (plusieurs workers Flask possibles)
-
-🧹 Nettoyer le projet
-```bash
-docker-compose down -v --remove-orphans
-```
-📬 Auteur
-Auteur : Jérémy Gachet - Nahel Kivuila - Paco Galasso
 
 ---
 
+## 🔁 Communication entre services
 
-
+- Le service Flask appelle l’API Spring Boot pour récupérer le produit.
+- Le service Spring Boot publie un message RabbitMQ après la création du produit.
+- Le service Flask consomme ce message dans un **worker asynchrone**.
 
 ---
-# 🚀 Déploiement avec Docker Swarm
+
+## 🛠️ Débogage
+
+| Action                      | Commande                                     |
+|----------------------------|----------------------------------------------|
+| Voir les services Swarm    | `docker service ls`                          |
+| Voir les conteneurs actifs | `docker ps`                                  |
+| Logs d’un service          | `docker service logs ecommerce_orders`       |
+| Voir les réplicas          | `docker service ps ecommerce_catalogue`      |
+
 ---
 
-## Étapes pour déployer :
-1. Initialiser Swarm (sur Play With Docker ou localement) :
+## 📘 Pattern de messagerie utilisé
+
+Le système utilise le pattern **Work Queues** de RabbitMQ :
+
+- 📤 Producteur = service Spring Boot
+- 📥 Consommateur = worker du service Flask
+- ✅ Avantages : découplage, scalabilité, fiabilité des messages
+
+---
+
+## 🧹 Nettoyer le projet
+
 ```bash
-docker swarm init
+docker stack rm ecommerce
+docker system prune -f
 ```
 
-2. Déployer la stack :
-```bash
-docker stack deploy -c docker-compose.yml ecommerce
-```
+---
 
-3. Vérifier les services :
-```bash
-docker service ls
-```
+## 🔭 (Optionnel) Visualiser le cluster Swarm
 
-4. Vérifier les réplicas :
-```bash
-docker service ps ecommerce_catalogue
-```
+Ajoute ce service dans `docker-compose.yml` :
 
-5. (Optionnel) Ajouter le visualizer :
 ```yaml
   visualizer:
     image: dockersamples/visualizer:latest
@@ -167,6 +178,13 @@ docker service ps ecommerce_catalogue
     networks:
       - backend
 ```
-Accès : `http://localhost:8081` pour voir l’état du cluster.
+
+Accès : [http://localhost:8081](http://localhost:8081)
 
 ---
+
+## 👨‍💻 Auteurs
+
+- Jérémy Gachet  
+- Nahel Kivuila  
+- Paco Galasso
